@@ -328,7 +328,7 @@ public class EsUtils1 {
 		System.out.println("test");
 		
 		client=getClient();
-		
+		//EsUtils1.createIndex("spnews", 4, 1);
 		//System.out.println(client);
 		
 		/*
@@ -393,7 +393,9 @@ public class EsUtils1 {
         dao1.getConnection();
         dao1.mysqlToEs();
         //dao1.mysqlTosearchquery();
-		
+        //dao1.search();
+      	//dao1.analyze();
+        
 		/*
 		//關閉連線
 		 if (client != null) {

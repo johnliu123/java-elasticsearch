@@ -1,11 +1,15 @@
 package com.esspnews.dao;
 
 import com.esspnews.utils.EsUtils1;
+
+
+
 import org.elasticsearch.client.transport.TransportClient;
 
 import java.io.IOException;
 import java.sql.*;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -26,17 +30,11 @@ import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestClient;
 import org.elasticsearch.client.RestHighLevelClient;
+import org.elasticsearch.client.indices.AnalyzeRequest;
+import org.elasticsearch.client.indices.AnalyzeResponse;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentType;
-import org.elasticsearch.index.query.BoolQueryBuilder;
-import org.elasticsearch.index.query.MatchQueryBuilder;
-import org.elasticsearch.index.query.TermQueryBuilder;
-
-import org.elasticsearch.index.query.Operator;
-import org.elasticsearch.index.query.PrefixQueryBuilder;
-import org.elasticsearch.index.query.QueryBuilders;
-import org.elasticsearch.index.query.WildcardQueryBuilder;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
@@ -149,16 +147,6 @@ public  static void test() {
 		
 		//TransportClient client=EsUtils.getSingleClient();
 		
-		try {
-			PreparedStatement pstm=conn.prepareStatement(sql);
-			ResultSet resultSet=pstm.executeQuery();
-			
-			
-		}
-		catch(SQLException e) {
-			e.printStackTrace();
-			 
-		}
 		
 		//讀取sql資料與將資料轉成map形式儲存
 		try {
@@ -194,6 +182,7 @@ public  static void test() {
                 
                 //IndexRequest 建立 index=spnews/type=news/id=nid 
                 IndexRequest request = new IndexRequest("spnews").type("news").id(String.valueOf(nid)); 
+                //IndexRequest request = new IndexRequest("test").type("news").id(String.valueOf(nid)); 
                 //
                 System.out.println(request.source(map));
                 
@@ -1022,6 +1011,121 @@ public static void mysqlTosearchquery2() {
         }
 		
 	}
+	
+	public static void search() {
+		
+		/*
+		String json = "{" +
+		        "\"user\":\"kimchy\"," +
+		        "\"postDate\":\"2013-01-30\"," +
+		        "\"message\":\"trying out Elasticsearch\"" +
+		    "}";
+		 */
+		
+		/*
+		String json= "{"+
+		    "\"match\":"+"{"+
+		      "\"title\":"+"{"+
+		        "\"query\":"+"\"足球\""+
+		      "}"+
+		    "}"+
+		  "}"+
+		"}";
+		*/
+		
+		//不能加query 不然會有錯誤
+		String json = "{\"match\":{\"title\":\"足\"}}";
+		
+		
+		//String dsl = "{\"match\":{\"title\":\"足\"}}";
+		
+		//Map maps = (Map)JSON.parse(dsl);  
+		//maps.get("query");
+		
+		//取得client連線
+		RestHighLevelClient client=EsUtils1.getClient();
+						
+						
+		//创建SearchRequest
+		SearchRequest searchRequest = new SearchRequest();
+		//指定索引为poems
+		searchRequest.indices("spnews4");
+		
+		//创建SearchSourceBuilder
+	    SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+		
+		WrapperQueryBuilder wqbQueryBuilder = QueryBuilders.wrapperQuery(json);
+		//将查询条件放入searchSourceBuilder中
+	    searchSourceBuilder.query(wqbQueryBuilder);
+	    
+	  //searchRequest解析searchSourceBuilder
+	    searchRequest.source(searchSourceBuilder);
+	    
+	    try {
+	    	
+	    	//获取SearchResponse
+			SearchResponse searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
+			
+			//获取分片结果
+	        SearchHits hits = searchResponse.getHits();
+	        SearchHit[] searchHits = hits.getHits();
+	        //获得数据
+	        for (SearchHit hit : searchHits) {
+	             String sourceAsString = hit.getSourceAsString();
+	             System.out.println(sourceAsString);            
+	             String index = hit.getIndex();
+	             //String type = hit.getType();
+	             String id = hit.getId();
+	             //System.out.println(id);
+	             
+	            }
+	        
+	        System.out.println("共搜索到："+hits.getHits().length+"筆資料");
+	    	
+	    }catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	    
+	    
+	    
+		
+		
+	}
+
+
+	public static void analyze() {
+		
+		//不能加query 不然會有錯誤
+		String json = "{\"match\":{\"title\":\"足\"}}";
+		
+		//取得client連線
+		RestHighLevelClient client=EsUtils1.getClient();
+		AnalyzeRequest request = AnalyzeRequest.withIndexAnalyzer(
+			    "spnews4",         
+			    "standard",        
+			    "The Quick Brown Fox  "
+			);
+		
+		try {
+	    	
+	    	//获取analyzeResponse
+			AnalyzeResponse analyzeResponse = client.indices().analyze(request, RequestOptions.DEFAULT);
+			List<AnalyzeResponse.AnalyzeToken> tokens= analyzeResponse.getTokens();
+			for (AnalyzeResponse.AnalyzeToken token : tokens) {
+				
+				String term = token.getTerm();
+				
+	            System.out.println(term);
+	        }
+	    	
+	    }catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+	}
+	
 	
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
